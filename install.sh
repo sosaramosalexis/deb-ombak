@@ -35,16 +35,66 @@ uuid_info() {
     awk -v u="$uuid" '$1==u {print $0}'
 }
 
+get_omv_name() {
+  local uuid="$1"
+  local config="/etc/openmediavault/config.xml"
+  local name=""
+
+  if [[ -f "$config" ]]; then
+    name=$(awk -v u="$uuid" '
+      BEGIN { found=0; name=""; }
+      /<mntent>/ { found=2; }
+      found==2 && /<uuid>/ { if (index($0, u)) { found=3; } }
+      found==3 && /<dir>/ {
+        gsub(/.*<dir>/, ""); gsub(/<\/dir>.*/, "");
+        name=$0; found=0;
+      }
+      END { if (name) print name; }
+    ' "$config" 2>/dev/null)
+
+    if [[ -z "$name" ]]; then
+      name=$(awk -v u="$uuid" '
+        BEGIN { found=0; rname=""; }
+        /<raid>/ { found=2; }
+        found==2 && /<uuid>/ { if (index($0, u)) { found=3; } }
+        found==3 && /<raidname>/ {
+          gsub(/.*<raidname>/, ""); gsub(/<\/raidname>.*/, "");
+          rname=$0; found=0;
+        }
+        END { if (rname) print rname; }
+      ' "$config" 2>/dev/null)
+      [[ -n "$name" ]] && name="RAID: ${name}"
+    fi
+  fi
+  echo "$name"
+}
+
 pick_uuid() {
   local title="${1:-Select UUID}"
   local prompt="${2:-Choose a drive:}"
   local items=()
   local uuids=()
+  local max_desc_len=60
 
   while IFS='|' read -r uuid label fstype size mount path; do
     [[ -z "$uuid" || "$uuid" == "UUID" ]] && continue
-    local desc="${label:-no-label}  ${fstype:-?}  ${size:-?}"
-    [[ -n "$mount" ]] && desc+="  [$mount]"
+
+    local omv_name
+    omv_name=$(get_omv_name "$uuid")
+    local desc=""
+
+    if [[ -n "$omv_name" ]]; then
+      desc="${omv_name}"
+    elif [[ -n "$label" && "$label" != "no-label" ]]; then
+      desc="${label}"
+    else
+      desc="${uuid:0:8}..."
+    fi
+
+    desc+="  ${fstype:-?}  ${size:-?}"
+    [[ -n "$mount" ]] && desc+="  [${mount}]"
+    [[ "${#desc}" -gt "$max_desc_len" ]] && desc="${desc:0:$((max_desc_len-3))}..."
+
     uuids+=("$uuid|$path")
     items+=("$uuid" "$desc")
   done < <(lsblk -f -o UUID,LABEL,FSTYPE,SIZE,MOUNTPOINT,PATH 2>/dev/null | tail -n +2 | \
@@ -59,12 +109,6 @@ pick_uuid() {
   choice=$(whiptail --menu --title "$title" "$prompt" 20 72 10 \
     "${items[@]}" 3>&1 1>&2 2>&3) || return 1
 
-  for entry in "${uuids[@]}"; do
-    if [[ "${entry%%|*}" == "$choice" ]]; then
-      echo "$choice"
-      return 0
-    fi
-  done
   echo "$choice"
   return 0
 }
