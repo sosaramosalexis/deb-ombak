@@ -1,3 +1,8 @@
+<p align="center">
+  <img src="https://placehold.co/120x179" width="90" alt="deb-ombak logo">
+  <!-- Replace src with your 784×1168 logo image (displayed at 90px wide) -->
+</p>
+
 [![GitHub](https://img.shields.io/badge/GitHub-sosaramosalexis/deb-ombak-181717?logo=github)](https://github.com/sosaramosalexis/deb-ombak)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Shell](https://img.shields.io/badge/shell-blue?logo=gnu-bash)]()
