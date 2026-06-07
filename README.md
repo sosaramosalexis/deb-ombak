@@ -10,7 +10,7 @@ Schedule and manage backups for OpenMediaVault drives using rsync and systemd ti
 
 ```bash
 su -
-bash <(curl -fsSL https://raw.githubusercontent.com/sosramalex/deb-ombak/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/sosaramosalexis/deb-ombak/main/install.sh)
 ```
 
 ## Features
